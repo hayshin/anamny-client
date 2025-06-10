@@ -28,36 +28,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('checkAuthStatus: Starting auth check...');
       setIsLoading(true);
       const token = await authService.getToken();
+      console.log('checkAuthStatus: Token found:', !!token);
+      
       if (token) {
         const userData = await authService.getUser();
+        console.log('checkAuthStatus: User data found:', !!userData);
+        
         if (userData) {
+          console.log('checkAuthStatus: Setting user from stored data:', userData.email);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
           // Token exists but no user data, try to fetch from API
           try {
+            console.log('checkAuthStatus: Fetching profile from API...');
             const profile = await authService.getProfile();
+            console.log('checkAuthStatus: Profile fetched successfully:', profile.email);
             setUser(profile);
             await authService.setUser(profile);
             setIsAuthenticated(true);
           } catch (error) {
             // Invalid token, clear everything
+            console.log('checkAuthStatus: Failed to fetch profile, clearing auth:', error);
             await authService.logout();
             setUser(null);
             setIsAuthenticated(false);
           }
         }
       } else {
+        console.log('checkAuthStatus: No token found, user not authenticated');
         setUser(null);
         setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('checkAuthStatus: Error during auth check:', error);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
+      console.log('checkAuthStatus: Auth check completed');
       setIsLoading(false);
     }
   };

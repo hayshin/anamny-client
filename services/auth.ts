@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const API_BASE_URL = 'http://localhost:8000'; // Change this to your actual API URL
 
@@ -40,7 +41,13 @@ class AuthService {
   // Token management
   async getToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(AuthService.TOKEN_KEY);
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        return localStorage.getItem(AuthService.TOKEN_KEY);
+      } else {
+        // Use SecureStore for mobile
+        return await SecureStore.getItemAsync(AuthService.TOKEN_KEY);
+      }
     } catch (error) {
       console.error('Error getting token:', error);
       return null;
@@ -49,7 +56,13 @@ class AuthService {
 
   async setToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(AuthService.TOKEN_KEY, token);
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        localStorage.setItem(AuthService.TOKEN_KEY, token);
+      } else {
+        // Use SecureStore for mobile
+        await SecureStore.setItemAsync(AuthService.TOKEN_KEY, token);
+      }
     } catch (error) {
       console.error('Error setting token:', error);
     }
@@ -57,7 +70,13 @@ class AuthService {
 
   async removeToken(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(AuthService.TOKEN_KEY);
+      if (Platform.OS === 'web') {
+        // Use localStorage for web
+        localStorage.removeItem(AuthService.TOKEN_KEY);
+      } else {
+        // Use SecureStore for mobile
+        await SecureStore.deleteItemAsync(AuthService.TOKEN_KEY);
+      }
     } catch (error) {
       console.error('Error removing token:', error);
     }
@@ -66,8 +85,25 @@ class AuthService {
   // User data management
   async getUser(): Promise<User | null> {
     try {
-      const userData = await AsyncStorage.getItem(AuthService.USER_KEY);
-      return userData ? JSON.parse(userData) : null;
+      let userData: string | null;
+      if (Platform.OS === 'web') {
+        userData = localStorage.getItem(AuthService.USER_KEY);
+      } else {
+        userData = await AsyncStorage.getItem(AuthService.USER_KEY);
+      }
+      
+      if (!userData) {
+        return null;
+      }
+      
+      try {
+        return JSON.parse(userData);
+      } catch (parseError) {
+        console.error('Error parsing user data, clearing corrupted data:', parseError);
+        // Clear corrupted data
+        await this.removeUser();
+        return null;
+      }
     } catch (error) {
       console.error('Error getting user:', error);
       return null;
@@ -76,7 +112,12 @@ class AuthService {
 
   async setUser(user: User): Promise<void> {
     try {
-      await AsyncStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+      const userData = JSON.stringify(user);
+      if (Platform.OS === 'web') {
+        localStorage.setItem(AuthService.USER_KEY, userData);
+      } else {
+        await AsyncStorage.setItem(AuthService.USER_KEY, userData);
+      }
     } catch (error) {
       console.error('Error setting user:', error);
     }
@@ -84,7 +125,11 @@ class AuthService {
 
   async removeUser(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(AuthService.USER_KEY);
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(AuthService.USER_KEY);
+      } else {
+        await AsyncStorage.removeItem(AuthService.USER_KEY);
+      }
     } catch (error) {
       console.error('Error removing user:', error);
     }
@@ -131,7 +176,7 @@ class AuthService {
       throw new Error('No token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/profile`, {
+    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -151,7 +196,7 @@ class AuthService {
       throw new Error('No token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/profile`, {
+    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

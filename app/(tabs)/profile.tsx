@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,13 +15,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function ProfileTabScreen() {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, isLoading: authLoading } = useAuth();
   
-  const [fullName, setFullName] = useState(user?.full_name || '');
-  const [age, setAge] = useState(user?.age?.toString() || '');
-  const [gender, setGender] = useState(user?.gender || '');
-  const [bloodType, setBloodType] = useState(user?.blood_type || '');
+  const [fullName, setFullName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [bloodType, setBloodType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update state when user data changes
+  useEffect(() => {
+    if (user) {
+      setFullName(user.full_name || '');
+      setAge(user.age?.toString() || '');
+      setGender(user.gender || '');
+      setBloodType(user.blood_type || '');
+    }
+  }, [user]);
 
   const handleUpdateProfile = async () => {
     try {
@@ -51,7 +62,7 @@ export default function ProfileTabScreen() {
           onPress: async () => {
             try {
               await logout();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to logout');
             }
           }
@@ -60,7 +71,21 @@ export default function ProfileTabScreen() {
     );
   };
 
-  if (!user) return null;
+  if (authLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No user data available</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -286,5 +311,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#e74c3c',
   },
 });

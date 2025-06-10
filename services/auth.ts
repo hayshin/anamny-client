@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const API_BASE_URL = 'http://server:8000'; // Change this to your actual API URL
+const API_BASE_URL = 'http://localhost:8000'; // Change this to your actual API URL
 
 export interface User {
   id: number;

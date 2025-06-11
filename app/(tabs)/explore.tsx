@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
+import { chatService, ChatMessage as APIChatMessage } from '@/services/chat';
 
 interface Message {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  apiMessageId?: number;
 }
 
 export default function ChatScreen() {
@@ -32,6 +34,15 @@ export default function ChatScreen() {
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+
+  const convertAPIMessage = (apiMessage: APIChatMessage): Message => ({
+    id: apiMessage.id.toString(),
+    text: apiMessage.content,
+    isUser: apiMessage.is_user_message,
+    timestamp: new Date(apiMessage.created_at),
+    apiMessageId: apiMessage.id,
+  });
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
@@ -44,20 +55,40 @@ export default function ChatScreen() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageText = inputText.trim();
     setInputText('');
     setIsLoading(true);
 
-    // Simulate AI response (in real implementation, this would call your backend)
-    setTimeout(() => {
-      const aiResponse: Message = {
+    try {
+      const response = await chatService.sendMessage(messageText, currentSessionId || undefined);
+      
+      // Update session ID if this is the first message
+      if (!currentSessionId) {
+        setCurrentSessionId(response.session.id);
+      }
+
+      // Replace the temporary user message with the real one from API
+      const apiUserMessage = convertAPIMessage(response.user_message);
+      const apiAiMessage = convertAPIMessage(response.ai_message);
+
+      setMessages(prev => {
+        // Remove the temporary user message and add both API messages
+        const withoutTemp = prev.slice(0, -1);
+        return [...withoutTemp, apiUserMessage, apiAiMessage];
+      });
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I understand you're experiencing some symptoms. While I can provide general information, please remember that I'm not a substitute for professional medical advice. For proper diagnosis and treatment, it's important to consult with a healthcare provider. \n\nCould you tell me more about what you're experiencing?",
+        text: "I apologize, but I'm experiencing technical difficulties right now. Please try again in a moment.",
         isUser: false,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, errorMessage]);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const suggestedQuestions = [

@@ -1,20 +1,14 @@
-# Use Node.js as base image
-FROM node:18-alpine
+FROM oven/bun:1 AS base
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+COPY package.json bun.lock ./
 
-# Install dependencies using bun
-RUN npm install
+RUN bun install --frozen-lockfile --production
 
-# Copy source code
 COPY . .
 
-# Expose port for Expo dev server
+# run the app
+USER bun
 EXPOSE 8081
-
-# Start Expo development server
-CMD ["npm", "start"]
+ENTRYPOINT [ "bun", "start"]

@@ -1,48 +1,26 @@
-# Multi-stage build for production
-FROM node:20-alpine as builder
-
-# Set work directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY bun.lock* ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
+# Use an official Node.js runtime as the base image
 FROM node:20-alpine
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Set work directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Install serve to run the built application
-RUN npm install -g serve
+# Copy package.json and package-lock.json (or npm-shrinkwrap.json)
+COPY package*.json ./
 
-# Copy built application from builder stage
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
+# Install dependencies (use --omit=dev for production)
+RUN npm install
 
-# Switch to non-root user
-USER nextjs
+# Copy the rest of the application files
+COPY . .
 
-# Expose port
-EXPOSE 3000
+# Create the .expo directory with correct permissions
+RUN mkdir -p .expo && chown -R node:node /app
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+# Run as a non-root user for security
+USER node
 
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Expose the port your app runs on (adjust if needed)
+EXPOSE 8081
+
+# Start the app (replace with your actual start command if different)
+CMD ["npm", "start"]

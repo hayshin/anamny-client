@@ -8,7 +8,5 @@ RUN bun install
 
 COPY . .
 
-# run the app
-USER bun
 EXPOSE 8081
 ENTRYPOINT [ "bun", "start"]

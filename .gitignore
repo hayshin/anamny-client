@@ -37,3 +37,13 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
